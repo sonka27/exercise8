@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Научный портал</title>
+  <style>
+  body { 
+    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif; 
+    background: #6e7e93; 
+    margin: 0; 
+    padding: 0; 
+    color: #471a1a; 
+}
+.app-container { 
+    max-width: 1200px; 
+    margin: 0 auto; 
+    padding: 20px;
+}
+.header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    padding-bottom: 20px; 
+    margin-bottom: 30px;
+}
+.btn-lang { 
+    padding: 10px 20px; 
+    font-size: 16px; cursor: pointer; 
+    background: #fff; 
+    border: 1px solid #ccc; 
+    border-radius: 4px; 
+}
+.grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+    gap: 20px; 
+}
+.card { 
+    border: 1px solid #ddd; 
+    border-radius: 8px; 
+    overflow: hidden; display: flex; 
+    flex-direction: column; 
+    background: #fff; 
+}
+.poster { 
+    width: 100%; 
+    height: 300px; 
+    object-fit: cover; 
+}
+.content { 
+    padding: 15px; 
+    flex-grow: 1; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: space-between; 
+}
+.actions { 
+    display: flex; 
+    justify-content: space-between; 
+    margin-top: 15px; 
+}
+.btn-more { 
+    background: #471a1a; 
+    color: white; 
+    border: none; 
+    padding: 8px 16px; 
+    border-radius: 4px; 
+    cursor: pointer; 
+}
+.btn-fav { 
+    background: none; 
+    border: none; 
+    font-size: 20px; 
+    cursor: pointer; 
+}
+.modal-overlay { 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0,0,0,0.5); 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    z-index: 100; 
+}
+.modal-content { 
+    background: white; 
+    padding: 30px; 
+    border-radius: 8px; 
+    max-width: 500px; 
+    width: 90%; }
+.full-text { 
+    margin: 20px 0; 
+    line-height: 2; 
+}
+.btn-close { 
+    background: #6e7e93; 
+    color: white; 
+    border: none; 
+    padding: 8px 16px; 
+    border-radius: 4px; 
+    cursor: pointer; 
+}
+.favorites-section { 
+    margin-top: 50px; 
+    background: #fff; 
+    padding: 20px; 
+    border-radius: 8px; 
+    border: 1px solid #eee; }
+  </style>
+</head>
+<body>
+  <div id="app" class="app-container">
+    <header class="header">
+      <h1>{{ t('title') }}</h1>
+      <button @click="toggleLanguage" class="btn-lang">{{ t('lang') }}</button>
+    </header>
+    <main class="grid">
+      <app-card v-for="article in articles" :key="article.id" :image="article.image">
+        <template #title>{{ t(`articles.${article.id}.title`) }}</template>
+        <template #description>{{ t(`articles.${article.id}.desc`) }}</template>
+        <template #actions>
+          <button @click="openModal(article.id)" class="btn-more">{{ t('more') }}</button>
+          <button @click="toggleFavorite(article.id)" class="btn-fav">{{ favorites.includes(article.id) ? '🖤' : '🤍' }}</button>
+        </template>
+      </app-card>
+    </main>
+
+    <app-modal :show="!!activeArticleId" @close="closeModal">
+      <template #header>{{ t(`articles.${activeArticleId}.title`) }}</template>
+      <template #body><p class="full-text">{{ t(`articles.${activeArticleId}.full`) }}</p></template>
+      <template #footer><button @click="closeModal" class="btn-close">{{ t('close') }}</button></template>
+    </app-modal>
+
+    <app-favorites :items="favorites">
+      <template #title>{{ t('favTitle') }}</template>
+      <template #empty>{{ t('favEmpty') }}</template>
+      <template #item="{ itemId }">{{ t(`articles.${itemId}.title`) }}</template>
+    </app-favorites>
+  </div>
+  <script src="https://unpkg.com/vue@3"></script>
+  <script src="https://unpkg.com/vue-i18n@11"></script>
+
+  <script>
+  const AppCard = {
+    props: ['image'],
+    template: `
+    <div class="card">
+      <img :src="image" alt="poster" class="poster"/>
+        <div class="content">
+          <h3><slot name="title"></slot></h3>
+          <p><slot name="description"></slot></p>
+          <div class="actions"><slot name="actions"></slot></div>
+          </div>
+        </div>`
+    };
+    const AppModal = {
+      props: ['show'],
+      emits: ['close'],
+      template: `
+        <div v-if="show" class="modal-overlay" @click.self="$emit('close')">
+          <div class="modal-content">
+            <h2><slot name="header"></slot></h2>
+            <slot name="body"></slot>
+            <slot name="footer"></slot>
+          </div>
+        </div>`
+    };
+    const AppFavorites = {
+      props: ['items'],
+      template: `
+        <section class="favorites-section">
+          <h2><slot name="title"></slot></h2>
+          <div v-if="items.length === 0"><p><slot name="empty"></slot></p></div>
+          <ul v-else>
+            <li v-for="item in items" :key="item"><slot name="item" :itemId="item"></slot></li>
+          </ul>
+        </section>`
+    };
+    const messages = {
+      ru: {
+        title: "Научный портал",
+        more: "Подробнее",
+        close: "Закрыть",
+        favEmpty: "В избранном пока ничего нет",
+        favTitle: "Избранные статьи",
+        lang: "English",
+        articles: {
+          art1: {
+            title: "Квантовые чудеса в реальном мире - макроскопическое туннелирование",
+            desc: "Лауреаты Нобелевской премии доказали, что странные законы квантовой механики работают не только для невидимых атомов, но и для крупных объектов. Исследователи Джон Кларк, Мишель Деворе и Джон Мартинис зафиксировали квантовое туннелирование в обычной электрической цепи.",
+            full: "В привычном нам мире мяч не может пройти сквозь глухую бетонную стену. Однако в микромире частицы обладают волновой природой и способны «просачиваться» сквозь непреодолимые барьеры. Это явление называется квантовым туннелированием.Долгое время считалось, что такие эффекты невозможны для крупных объектов, которые можно подержать в руках. Ученые опровергли это, создав специальные сверхпроводящие электрические цепи. Внутри этих цепей миллиарды электронов начали двигаться синхронно, как одна гигантская квантовая частица.Они смогли зафиксировать, как ток проходит сквозь изоляционный барьер, буквально преодолевая «непроходимую стену». Это фундаментальное открытие перенесло квантовую физику из теории в инженерную практику и заложило основу для создания надежных кубитов - сердца современных квантовых компьютеров."
+          },
+          art2: {
+            title: "Как поп-арт изменил наше восприятие искусства",
+            desc: "Поп-арт стер границу между высоким искусством и массовой культурой. Художники этого направления превратили обычные бытовые предметы, рекламу и комиксы в главные объекты музейных экспозиций, заставив мир по-новому взглянуть на общество потребления.",
+            full: "В середине XX века искусство ассоциировалось исключительно с классической живописью и сложными философскими идеями. Эту традицию разрушило появление поп-арта в Великобритании и США. Энди Уорхол, Рой Лихтенштейн и другие художники заявили, что окружающая нас повседневность достойна места в галереях.Вместо портретов аристократов на холстах появились банки из-под супа, бутылки газировки и лица голливудских звезд. Главным методом поп-арта стало заимствование образов из рекламы, комиксов и телевидения, а также использование технологий массовой печати.Этот стиль не просто копировал реальность, а иронизировал над культурой потребления. Поп-арт доказал, что искусство может быть понятным, доступным и тиражируемым. Он навсегда изменил дизайн, моду и рекламу, сделав повседневную жизнь главным источником вдохновения."
+          }
+        }
+      },
+      en: {
+        title: "Science portal",
+        more: "Read More",
+        close: "Close",
+        favEmpty: "No favorites added yet",
+        favTitle: "Favorite Articles",
+        lang: "Русский",
+        articles: {
+          art1: {
+            title: "Quantum Wonders in the Real World: Macroscopic Tunneling",
+            desc: "Nobel Prize laureates have proven that the strange laws of quantum mechanics apply not only to invisible atoms but also to large objects. Researchers John Clarke, Michel Devoret, and John Martinis captured quantum tunneling within a standard electrical circuit.",
+            full: "In our everyday world, a ball cannot pass through a solid concrete wall. However, in the microworld, particles possess a wave-like nature and can 'leak' through insurmountable barriers. This phenomenon is known as quantum tunneling.For a long time, it was believed that such effects were impossible for large, tangible objects. Scientists disproved this by creating specialized superconducting electrical circuits. Inside these circuits, billions of electrons began to move synchronously, behaving like a single, giant quantum particle.They successfully recorded current passing through an insulating barrier, literally overcoming an 'impassable wall.' This fundamental discovery moved quantum physics from theory into engineering practice and laid the foundation for creating reliable qubits-the heart of modern quantum computers."
+          },
+          art2: {
+            title: "How Pop Art Changed Our Perception of Art",
+            desc: "Pop art blurred the line between high art and mass culture. Artists of this movement turned ordinary everyday objects, advertisements, and comic books into the main subjects of museum exhibitions, forcing the world to look at consumer society in a new way.",
+            full: "In the mid-20th century, art was associated exclusively with classical painting and complex philosophical ideas. This tradition was shattered by the emergence of pop art in the UK and the US. Andy Warhol, Roy Lichtenstein, and other artists declared that the everyday world around us deserved a place in art galleries.Instead of portraits of aristocrats, canvases began to feature soup cans, soda bottles, and the faces of Hollywood stars. The primary method of pop art was borrowing imagery from advertising, comic books, and television, as well as using mass-printing technologies.This style did not just copy reality; it ironized the consumer culture. Pop art proved that art could be understandable, accessible, and replicable. It permanently changed design, fashion, and advertising, making everyday life the main source of inspiration."
+          }
+        }
+      }
+    };
+    const i18n = VueI18n.createI18n({
+      legacy: false, 
+      locale: 'ru',
+      fallbackLocale: 'en',
+      messages
+    });
+    const { createApp, ref } = Vue;
+    createApp({
+      components: {
+        AppCard,
+        AppModal,
+        AppFavorites
+      },
+      setup() {
+        const { t, locale } = VueI18n.useI18n();
+        const articles = ref([
+          { id: 'art1', image: 'nobel.jpg' },
+          { id: 'art2', image: 'popart.jpg' }
+        ]);
+        const favorites = ref([]);
+        const activeArticleId = ref(null);
+        const toggleLanguage = () => {
+          locale.value = locale.value === 'ru' ? 'en' : 'ru';
+        };
+        const toggleFavorite = (id) => {
+          const index = favorites.value.indexOf(id);
+          if (index > -1) {
+            favorites.value.splice(index, 1);
+          } else {
+            favorites.value.push(id);
+          }
+        };
+        const openModal = (id) => { activeArticleId.value = id; };
+        const closeModal = () => { activeArticleId.value = null; };
+
+        return {
+          t,
+          articles,
+          favorites,
+          activeArticleId,
+          toggleLanguage,
+          toggleFavorite,
+          openModal,
+          closeModal
+        };
+      }
+    })
+    .use(i18n)
+    .mount('#app');
+  </script>
+</body>
+</html>
